@@ -63,7 +63,8 @@ export default class Personality {
       types: config.types || 'image/*',
       namePlaceholder: config.namePlaceholder || 'Name',
       descriptionPlaceholder: config.descriptionPlaceholder || 'Description',
-      linkPlaceholder: config.linkPlaceholder || 'Link'
+      linkPlaceholder: config.linkPlaceholder || 'Link',
+      uploader: config.uploader || undefined
     };
 
     /**
@@ -79,6 +80,8 @@ export default class Personality {
       onUpload: (response) => this.onUpload(response),
       onError: (error) => this.uploadingFailed(error)
     });
+    
+    this.enableFileUpload = this.enableFileUpload.bind(this);
   }
 
   /**
@@ -91,6 +94,17 @@ export default class Personality {
       icon: ToolboxIcon,
       title: 'Personality'
     };
+  }
+
+  /**
+   * Allow to upload files on button click
+   */
+  enableFileUpload() {
+    this.uploader.uploadSelectedFile({
+      onPreview: () => {
+        this.nodes.wrapper.classList.add(this.CSS.wrapperLoading, this.CSS.loader);
+      },
+    });
   }
 
   /**
