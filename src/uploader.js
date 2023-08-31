@@ -1,13 +1,18 @@
 import ajax from '@codexteam/ajax';
 
 /**
+ * @typedef AttachesToolConfig
+ */
+
+/**
  * Module for file uploading.
  */
 export default class Uploader {
   /**
-   * @param {PersonalityConfig} config
-   * @param {function} onUpload - one callback for all uploading (file, d-n-d, pasting)
-   * @param {function} onError - callback for uploading errors
+   * @param {object} options - constructor params
+   * @param {AttachesToolConfig} options.config - user defined configuration
+   * @param {Function} options.onUpload - callback for successful file upload
+   * @param {Function} options.onError - callback for uploading errors
    */
   constructor({ config, onUpload, onError }) {
     this.config = config;
@@ -17,28 +22,67 @@ export default class Uploader {
 
   /**
    * Handle clicks on the upload file button
-   * @fires ajax.transport()
-   * @param {function} onPreview - callback fired when preview is ready
+   *
+   * @param {Function} onPreview - callback fired when preview is ready
    */
   uploadSelectedFile({ onPreview }) {
-    ajax.transport({
-      url: this.config.endpoint,
-      accept: this.config.types,
-      beforeSend: (files) => {
-        const reader = new FileReader();
+    /**
+     * Custom uploading
+     * or default uploading
+     */
+    let upload;
 
-        reader.readAsDataURL(files[0]);
-        reader.onload = (e) => {
-          onPreview(e.target.result);
-        };
-      },
-      fieldName: this.config.field
-    }).then((response) => {
-      this.onUpload(response);
-    }).catch((error) => {
-      const message = error.body ? error.body.message : 'Uploading failed';
+    // custom uploading
+    if (
+      this.config.uploader &&
+      typeof this.config.uploader.uploadByFile === 'function'
+    ) {
+      upload = ajax.selectFiles({ accept: this.config.types }).then((files) => {
+        onPreview();
+        const customUpload = this.config.uploader.uploadByFile(files[0]);
 
-      this.onError(message);
-    });
+        if (!isPromise(customUpload)) {
+          console.warn(
+            'Custom uploader method uploadByFile should return a Promise'
+          );
+        }
+
+        return customUpload;
+      });
+
+      // default uploading
+    } else {
+      upload = ajax
+        .transport({
+          url: this.config.endpoint,
+          accept: this.config.types,
+          beforeSend: () => onPreview(),
+          fieldName: this.config.field,
+          headers: this.config.additionalRequestHeaders || {}
+        })
+        .then((response) => response.body);
+    }
+
+    upload
+      .then((response) => {
+        this.onUpload(response);
+      })
+      .catch((errorResponse) => {
+        const error = errorResponse.body;
+
+        const message =
+          error && error.message ? error.message : this.config.errorMessage;
+
+        this.onError(message);
+      });
   }
+}
+/**
+ * Check if passed object is a Promise
+ *
+ * @param  {*}  object - object to check
+ * @returns {boolean}
+ */
+function isPromise(object) {
+  return object && typeof object.then === 'function';
 }
