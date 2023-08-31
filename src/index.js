@@ -80,7 +80,7 @@ export default class Personality {
       onUpload: (response) => this.onUpload(response),
       onError: (error) => this.uploadingFailed(error)
     });
-    
+
     this.enableFileUpload = this.enableFileUpload.bind(this);
   }
 
@@ -103,7 +103,7 @@ export default class Personality {
     this.uploader.uploadSelectedFile({
       onPreview: () => {
         this.nodes.wrapper.classList.add(this.CSS.wrapperLoading, this.CSS.loader);
-      },
+      }
     });
   }
 
